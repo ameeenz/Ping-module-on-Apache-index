@@ -1,0 +1,71 @@
+---
+- name: Automate web server configuration and deployment
+  hosts: all
+  become: yes
+  vars:
+    # vars defining
+    zip_source: /home/amin/Downloads/iptest.zip
+    zip_dest: /home/ubuntu/iptest.zip
+    extracted_dir: /home/ubuntu/
+    extracted_file: /home/ubuntu/iptest
+    web_root: /var/www/html
+    cgi_script_source: /home/amin/Downloads/ping_script.py
+    cgi_script_dest: /usr/lib/cgi-bin/ping_script.py
+    
+  tasks:
+    # default index.html delete
+    - name: Remove index.html
+      file:
+        path: "{{web_root}}/index.html"
+        state: absent
+
+    # unzip install
+    - name: Install unzip
+      apt:
+        name: unzip
+        state: present
+        update_cache: yes
+
+    # copy html files to home directory
+    - name: Copy iptest.zip to servers
+      copy:
+        src: "{{zip_source}}"
+        dest: "{{zip_dest}}"
+
+    # unzipping files
+    - name: Unzip iptest.zip
+      ansible.builtin.unarchive:
+        src: "{{zip_dest}}"
+        dest: "{{extracted_dir}}"
+        remote_src: yes
+
+    # transfer to web server web page
+    - name: Copy extracted files to /var/www/html
+      copy:
+        src: "{{extracted_file}}"
+        dest: "{{web_root}}"
+        remote_src: yes
+
+    # activating cgi
+    - name: Enable CGI module
+      command: sudo a2enmod cgi
+
+    # restarting apache
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+
+    # python script creation in use/lib/cgi-bin 
+    - name: Copy ping_script.py to hosts
+      copy:
+      	src: "{{ cgi_script_source }}"
+        dest: "{{ cgi_script_dest }}"
+        
+
+    # givin privilage
+    - name: Make ping_script.py executable
+      file:
+        path: "{{ cgi_script_dest }}"
+        mode: '0755'
+
